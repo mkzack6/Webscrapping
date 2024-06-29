@@ -1,0 +1,43 @@
+import time
+import pandas as pd
+import pubchempy as pcp
+
+def retrieve_smiles(name, retries=10, delay=30):
+    attempt = 0
+    while attempt < retries:
+        try:
+            compounds = pcp.get_compounds(name, 'name')
+            if compounds:
+                return compounds[0].isomeric_smiles
+            elif compounds:
+                return compounds[0].canonical_smiles
+            else:
+                return None
+        except Exception as e:
+            print(f"Error retrieving SMILES for '{name}': {str(e)}")
+            attempt += 1
+            if attempt < retries:
+                print(f"Retrying... ({attempt}/{retries})")
+                time.sleep(delay)
+            else:
+                return None
+
+# Load the input DataFrame
+input_df = pd.read_excel(r"C:\Users\Zack\Desktop\compounds.csv.xlsx")
+
+# Add a new column for SMILES if it doesn't exist
+if 'SMILES' not in input_df.columns:
+    input_df['SMILES'] = None
+
+# Loop through each compound in the DataFrame
+for index, row in input_df.iterrows():
+    compound_name = row.iloc[0]  # Extract the compound name from the DataFrame cell
+    
+    # Retrieve SMILES for the compound name
+    smiles = retrieve_smiles(compound_name)
+    
+    # Update the DataFrame with the SMILES
+    input_df.at[index, 'SMILES'] = smiles
+
+# Save the results to a new Excel file
+input_df.to_excel('put_data.xlsx', index=False)
